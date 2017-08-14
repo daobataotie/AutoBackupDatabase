@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Globalization;
 
 namespace PlanBackupDatabase
 {
@@ -9,13 +10,15 @@ namespace PlanBackupDatabase
     {
         string userName;
         string password;
+        string localPath;
         FtpWebRequest fwr;
         string ftpUrl;
 
-        public FTPHelper(string url, string userName, string password)
+        public FTPHelper(string url, string userName, string password, string localpath)
         {
             this.userName = userName;
             this.password = password;
+            this.localPath = localpath;
             ftpUrl = url;
         }
 
@@ -33,10 +36,16 @@ namespace PlanBackupDatabase
             Dictionary<string, long> list = new Dictionary<string, long>();
             while (!string.IsNullOrEmpty(line) && !line.Contains("<DIR>")) //文件夹会包含 <DIR>
             {
-                string fileName = line.Substring(39);      //文件名是从39的索引开始
-                long size = long.Parse(line.Substring(0, 39).Substring(line.Substring(0, 39).Trim().LastIndexOf(' ')).Trim());
+                string fileName = line.Substring(49);      //文件名是从39的索引开始，换了个服务器又是从49开始的   //-rw-r--r-- 1 ftp ftp        1260032 Aug 12 14:45 CRM_27_backup_2017_08_12_000002_9882893.bak
+                long size = long.Parse(line.Substring(0, 35).Substring(line.Substring(0, 35).Trim().LastIndexOf(' ')).Trim());
+                DateTime createDate = DateTime.ParseExact(line.Substring(0, 49).Substring(35).Trim(), "MMM dd HH:mm", CultureInfo.CreateSpecificCulture("en-US"), DateTimeStyles.None);
+                if ((DateTime.Now - createDate).Days > 30) //超过30天的备份文件删除
+                {
+                    DeleteFile(fileName);
+                }
+                else
+                    list.Add(fileName, size);
 
-                list.Add(fileName, size);
                 line = reader.ReadLine();
             }
             reader.Close();
@@ -59,7 +68,7 @@ namespace PlanBackupDatabase
             return length;
         }
 
-        public void DownloadFile(string fileName, string localPath)
+        public void DownloadFile(string fileName)
         {
             try
             {
@@ -94,8 +103,34 @@ namespace PlanBackupDatabase
                 }
                 else
                 {
-                    DownloadFile(fileName, localPath);
+                    DownloadFile(fileName);
                 }
+            }
+        }
+
+        public void DeleteFile(string fileName)
+        {
+            try
+            {
+                fwr = FtpWebRequest.Create(ftpUrl + "//" + fileName) as FtpWebRequest;
+                fwr.UseBinary = true;
+                fwr.Method = WebRequestMethods.Ftp.DeleteFile;
+                fwr.Credentials = new NetworkCredential(userName, password);
+
+                FtpWebResponse response = fwr.GetResponse() as FtpWebResponse;
+                long size = response.ContentLength;
+                Stream stream = response.GetResponseStream();
+                StreamReader sr = new StreamReader(stream);
+                sr.ReadToEnd();
+
+                sr.Close();
+                stream.Close();
+                response.Close();
+            }
+            catch (Exception ex)
+            {
+                string logFileName = localPath + "//log.txt";
+                File.AppendAllText(logFileName, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")} : {ex.Message}\r\n");
             }
         }
     }

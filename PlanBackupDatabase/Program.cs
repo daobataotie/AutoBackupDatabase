@@ -13,7 +13,8 @@ namespace PlanBackupDatabase
         static FTPHelper ftp;
         static void Main(string[] args)
         {
-            ftp = new FTPHelper("ftp://211.149.171.190", "Administrator", "22wu32ap");
+            //ftp = new FTPHelper("ftp://211.149.171.190", "Administrator", "22wu32ap");
+            ftp = new FTPHelper("ftp://113.17.184.139/SQL Backup", "caorui", "caorui123", backupFolder);
 
             Sync();
         }
@@ -35,7 +36,7 @@ namespace PlanBackupDatabase
             {
                 if (File.Exists(backupFolder + "//" + F))
                     File.Delete(backupFolder + "//" + F);
-                ftp.DownloadFile(F, backupFolder);
+                ftp.DownloadFile(F);
             });
         }
     }
