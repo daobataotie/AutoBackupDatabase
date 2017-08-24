@@ -9,12 +9,12 @@ namespace PlanBackupDatabase
 {
     class Program
     {
-        static string backupFolder = "F:\\Backup";
+        static string backupFolder = "E:\\Backup";
         static FTPHelper ftp;
         static void Main(string[] args)
         {
             //ftp = new FTPHelper("ftp://211.149.171.190", "Administrator", "22wu32ap");
-            ftp = new FTPHelper("ftp://113.17.184.139/SQL Backup", "caorui", "caorui123", backupFolder);
+            ftp = new FTPHelper("ftp://113.17.184.139/SQL Backup", "caorui", "caorui123456", backupFolder);
 
             Sync();
         }
