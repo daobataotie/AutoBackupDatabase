@@ -24,34 +24,44 @@ namespace PlanBackupDatabase
 
         public Dictionary<string, long> GetFileNames()
         {
-            fwr = FtpWebRequest.Create(ftpUrl) as FtpWebRequest;
-            fwr.UseBinary = true;
-            fwr.Method = WebRequestMethods.Ftp.ListDirectoryDetails;
-            fwr.Credentials = new NetworkCredential(userName, password);
-            WebResponse response = fwr.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string line = reader.ReadLine();
-
-            List<string> tempList = new List<string>();
-            Dictionary<string, long> list = new Dictionary<string, long>();
-            while (!string.IsNullOrEmpty(line) && !line.Contains("<DIR>")) //文件夹会包含 <DIR>
+            try
             {
-                string fileName = line.Substring(49);      //文件名是从39的索引开始，换了个服务器又是从49开始的   //-rw-r--r-- 1 ftp ftp        1260032 Aug 12 14:45 CRM_27_backup_2017_08_12_000002_9882893.bak
-                long size = long.Parse(line.Substring(0, 35).Substring(line.Substring(0, 35).Trim().LastIndexOf(' ')).Trim());
-                DateTime createDate = DateTime.ParseExact(line.Substring(0, 49).Substring(35).Trim(), "MMM dd HH:mm", CultureInfo.CreateSpecificCulture("en-US"), DateTimeStyles.None);
-                if ((DateTime.Now - createDate).Days > 30) //超过30天的备份文件删除
+                fwr = FtpWebRequest.Create(ftpUrl) as FtpWebRequest;
+                fwr.UseBinary = true;
+                fwr.Method = WebRequestMethods.Ftp.ListDirectoryDetails;
+                fwr.Credentials = new NetworkCredential(userName, password);
+                WebResponse response = fwr.GetResponse();
+                StreamReader reader = new StreamReader(response.GetResponseStream());
+                string line = reader.ReadLine();
+
+                List<string> tempList = new List<string>();
+                Dictionary<string, long> list = new Dictionary<string, long>();
+                while (!string.IsNullOrEmpty(line) && !line.Contains("<DIR>")) //文件夹会包含 <DIR>
                 {
-                    DeleteFile(fileName);
+                    string fileName = line.Substring(49);      //文件名是从39的索引开始，换了个服务器又是从49开始的   //-rw-r--r-- 1 ftp ftp        1260032 Aug 12 14:45 CRM_27_backup_2017_08_12_000002_9882893.bak
+                    long size = long.Parse(line.Substring(0, 35).Substring(line.Substring(0, 35).Trim().LastIndexOf(' ')).Trim());
+                    DateTime createDate = DateTime.ParseExact(line.Substring(0, 49).Substring(35).Trim(), "MMM dd HH:mm", CultureInfo.CreateSpecificCulture("en-US"), DateTimeStyles.None);
+                    if ((DateTime.Now - createDate).Days > 30) //超过30天的备份文件删除
+                    {
+                        //DeleteFile(fileName);
+                    }
+                    else
+                        list.Add(fileName, size);
+
+                    line = reader.ReadLine();
                 }
-                else
-                    list.Add(fileName, size);
+                reader.Close();
+                response.Close();
 
-                line = reader.ReadLine();
+                return list;
             }
-            reader.Close();
-            response.Close();
+            catch (Exception ex)
+            {
+                string logFileName = localPath + "//log.txt";
+                File.AppendAllText(logFileName, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")} : {ex.Message}\r\n");
 
-            return list;
+                return new Dictionary<string, long>();
+            }
         }
 
         public long GetFileSize(string fileName)

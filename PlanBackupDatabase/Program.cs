@@ -28,6 +28,12 @@ namespace PlanBackupDatabase
             DirectoryInfo di = new DirectoryInfo(backupFolder);
             foreach (var item in di.GetFiles())
             {
+                if (item.Extension == ".bak" && (DateTime.Now - item.CreationTime).Days > 30)
+                {
+                    //di.Delete();
+                    item.Delete();
+                    continue;
+                }
                 localFiles.Add(item.Name, item.Length);
             }
 
